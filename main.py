@@ -142,25 +142,18 @@ class Processor:
         for line in program:
             self.process_instruction(line[0], line[1])
 
+lines = []
+while True:
+    L = input()
+    L.rstrip('\n')
+    if L == 'QUIT':
+        break
+    lines.append(L)
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Simulate instruction\
-    prefetching for a custom instruction set processor')
-    parser.add_argument('-f', '--file', required=True,
-                        help='program filename to run')
-    parser.add_argument('-m', '--memory', default=100,
-                        help='memory size')
-    parser.add_argument('-p', '--prefetch', dest='prefetch', default=False,
-                        help='activates prefetch if present', action='store_true')
+program = [list(map(lambda l: int(l), line.split(" "))) for line in lines]
 
-    args = parser.parse_args()
-
-    lines = [line.rstrip('\n') for line in open(args.file)]
-    program = [list(map(lambda l: int(l), line.split(" "))) for line in lines]
-
-    cpu = Processor(args.prefetch, int(args.memory))
-    cpu.read_program(program)
-    cpu.run()
-
-    print("CPU Memory data:", cpu.data)
-    print("Final accumulator value:", cpu.acc)
+cpu = Processor(args.prefetch, int(args.memory))
+cpu.read_program(program)
+cpu.run()
+print("CPU Memory data:", cpu.data)
+print("Final accumulator value:", cpu.acc)
