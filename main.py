@@ -1,39 +1,27 @@
-import argparse
-import time
-
-INOP = 0  # nop
-IMOV = 1  # mov
-IADD = 2  # add
-ISUB = 3  # sub
-IMUL = 4  # mul
-IDIV = 5  # div
-IAND = 6  # and
-IOR = 7  # or
-INOT = 8  # not
-IBWA = 9  # bitwise and
-IBWO = 10  # bitwise or
-IBWX = 11  # bitwise xor
-IBWL = 12  # bitwise rot left
-IBWR = 13  # bitwise rot right
-IBWN = 14  # bitwise not
-IJMP = 15  # jump
-IJPZ = 16  # jump if zero
-IJPN = 17  # jump if nonzero
-ISAV = 18  # save data
-ILOD = 19  # load data
-IHLT = 20  # halt
-IADR = 21  # toggle addressing mode
-
-MISS_PENALTY = 0.100
-PREFETCH_TIME = 0.010
-FETCH_TIME = 0.010
-
-
-# MISS_PENALTY = 0.00
-# PREFETCH_TIME = 0.00
-# FETCH_TIME = 0.00
-
-
+com = {
+'NOP' : 0,   # nop
+'MOV' : 1,   # mov
+'ADD' : 2,   # add
+'SUB' : 3,  # sub
+'MUL' : 4,  # mul
+'DIV' : 5,  # div
+'AND' : 6,  # and
+'OR' : 7 , # or
+'NOT' : 8,  # not
+'BWA' : 9,  # bitwise and
+'BWO' : 10,  # bitwise or
+'BWX' : 11,  # bitwise xor
+'BWL' : 12,  # bitwise rot left
+'BWR' : 13,  # bitwise rot right
+'BWN' : 14,  # bitwise not
+'JMP' : 15,  # jump
+'JPZ' : 16,  # jump if zero
+'JPN' : 17,  # jump if nonzero
+'SAV' : 18,  # save data
+'LOD' : 19,  # load data
+'HLT' : 20,  # halt
+'ADR' : 21,  # toggle addressing mode
+}
 class Processor:
     acc = 0
     pc = 0
@@ -42,11 +30,9 @@ class Processor:
     indirect = False
 
     program = None
-    prefetch = False
     data = []
 
-    def __init__(self, prefetch, memsize):
-        self.prefetch = prefetch
+    def __init__(self, memsize):
         self.data = [0 for i in range(memsize)]
         self.memsize = memsize
 
@@ -68,34 +54,32 @@ class Processor:
     def get_y(self, y):
         return y if self.indirect is False else self.data[y]
 
-    instruction_set = {
-        INOP: lambda self, acc, pc, y: (acc, pc),
-        IMOV: lambda self, acc, pc, y: (self.get_y(y), pc),
-        IADD: lambda self, acc, pc, y: (acc + self.get_y(y), pc),
-        ISUB: lambda self, acc, pc, y: (acc - self.get_y(y), pc),
-        IMUL: lambda self, acc, pc, y: (acc * self.get_y(y), pc),
-        IDIV: lambda self, acc, pc, y: (acc / self.get_y(y), pc),
-        IAND: lambda self, acc, pc, y: (acc and self.get_y(y), pc),
-        IOR: lambda self, acc, pc, y: (acc or self.get_y(y), pc),
-        INOT: lambda self, acc, pc, y: (not acc, pc),
-        IBWA: lambda self, acc, pc, y: (acc & self.get_y(y), pc),
-        IBWO: lambda self, acc, pc, y: (acc | self.get_y(y), pc),
-        IBWX: lambda self, acc, pc, y: (acc ^ self.get_y(y), pc),
-        IBWL: lambda self, acc, pc, y: (acc << self.get_y(y), pc),
-        IBWR: lambda self, acc, pc, y: (acc >> self.get_y(y), pc),
-        IBWN: lambda self, acc, pc, y: (~ acc, pc),
-        IJMP: lambda self, acc, pc, y: (acc, self.get_y(y)),
-        IJPZ: lambda self, acc, pc, y: (acc, self.get_y(y)) if acc == 0 else (acc, pc),
-        IJPN: lambda self, acc, pc, y: (acc, self.get_y(y)) if acc != 0 else (acc, pc),
-        ISAV: lambda self, acc, pc, y: self.save(self.get_y(y)),
-        ILOD: lambda self, acc, pc, y: self.load(self.get_y(y)),
-        IHLT: lambda self, acc, pc, y: (acc, -2),
-        IADR: lambda self, acc, pc, y: self.toggle_adr()
-    }
-
+    instruction_set = [
+         lambda self, acc, pc, y: (acc, pc),
+         lambda self, acc, pc, y: (self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc + self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc - self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc * self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc / self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc and self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc or self.get_y(y), pc),
+         lambda self, acc, pc, y: (not acc, pc),
+         lambda self, acc, pc, y: (acc & self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc | self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc ^ self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc << self.get_y(y), pc),
+         lambda self, acc, pc, y: (acc >> self.get_y(y), pc),
+         lambda self, acc, pc, y: (~ acc, pc),
+         lambda self, acc, pc, y: (acc, self.get_y(y)),
+         lambda self, acc, pc, y: (acc, self.get_y(y)) if acc == 0 else (acc, pc),
+         lambda self, acc, pc, y: (acc, self.get_y(y)) if acc != 0 else (acc, pc),
+         lambda self, acc, pc, y: self.save(self.get_y(y)),
+         lambda self, acc, pc, y: self.load(self.get_y(y)),
+         lambda self, acc, pc, y: (acc, -2),
+         lambda self, acc, pc, y: self.toggle_adr()
+    ]
     def process_instruction(self, x, y):
-        f = self.instruction_set.get(x)
-        (self.acc, self.pc) = f(self, self.acc, self.pc, y)
+        (self.acc, self.pc) = self.instruction_set[x](self, self.acc, self.pc, y)
         self.acc = int(self.acc)
         self.pc = int(self.pc) + 1
 
@@ -103,11 +87,8 @@ class Processor:
         self.program = program
 
     def fetch_instruction(self):
-        time.sleep(FETCH_TIME)
         if self.instr_pc == self.pc:
             return self.instr
-
-        time.sleep(MISS_PENALTY)
         self.instr_pc = self.pc
         if self.instr_pc < len(self.program):
             self.instr = self.program[self.instr_pc]
@@ -115,45 +96,27 @@ class Processor:
             raise Exception("Exceeded program code")
         return self.instr
 
-    def prefetch_instruction(self):
-        time.sleep(PREFETCH_TIME)
-        self.instr_pc = self.pc + 1 if self.pc < len(self.program) - 1 else len(self.program) - 1
-        self.instr = self.program[self.instr_pc]
-        return self.instr
-
     def execute_if_not_halted(self):
         if self.pc == -1:
             return True
-
         self.fetch_instruction()
         instr = self.instr
-        if self.prefetch:
-            self.prefetch_instruction()
         self.process_instruction(instr[0], instr[1])
-
         return False
-
     def run(self):
         halted = False;
         while not halted:
             halted = self.execute_if_not_halted()
-
-    def debug_execute_all(self):
-        for line in program:
-            self.process_instruction(line[0], line[1])
-
 lines = []
 while True:
-    L = input()
-    L.rstrip('\n')
+    L = input().split('\n')[0]
     if L == 'QUIT':
         break
-    lines.append(L)
-
-program = [list(map(lambda l: int(l), line.split(" "))) for line in lines]
-
-cpu = Processor(args.prefetch, int(args.memory))
-cpu.read_program(program)
+    elif L != '':
+        lines.append(L)
+cpu = Processor(100)
+cpu.read_program([list(map(lambda l: com[l], line.split(" "))) for line in lines])
 cpu.run()
+
 print("CPU Memory data:", cpu.data)
 print("Final accumulator value:", cpu.acc)
