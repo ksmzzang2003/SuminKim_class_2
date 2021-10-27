@@ -1,0 +1,9 @@
+avenues = 21
+streets = 21
+robot = (1, 1, 'E', 0)
+walls = [
+
+]
+beepers = {
+    (11,11) : 1
+}
